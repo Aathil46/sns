@@ -28,18 +28,26 @@ export async function calculateUserScores(userId: string) {
   if (user.bio && user.bio.length > 10) profileCompleteness += 50;
 
   // --- 3. Social Trust (0-100) ---
-  const connectionsCountRes = await db
-    .select({ count: count() })
+  const followerRecords = await db
+    .select({ followerTrust: users.trustScore })
     .from(connections)
+    .innerJoin(users, eq(connections.followerId, users.id))
     .where(and(eq(connections.followingId, userId), eq(connections.status, 'accepted')))
-    .get();
-  const followersCount = connectionsCountRes?.count || 0;
-  // E.g., 5 followers = 100 score
-  let socialTrust = Math.min(100, (followersCount / 5) * 100);
+    .all();
+
+  const followersCount = followerRecords.length;
+  let socialTrust = 0;
+  
+  if (followersCount > 0) {
+    const totalTrust = followerRecords.reduce((sum, record) => sum + (record.followerTrust || 0), 0);
+    const averageTrust = totalTrust / followersCount;
+    // Base weight by follower count (up to 5), scaled by their average trust
+    socialTrust = Math.min(100, (followersCount / 5) * averageTrust);
+  }
 
   // --- 4. Positive Interactions (0-100) ---
   // Count likes received on their posts
-  const userPosts = await db.select({ id: posts.id }).from(posts).where(eq(posts.authorId, userId)).all();
+  const userPosts = await db.select({ id: posts.id, createdAt: posts.createdAt }).from(posts).where(eq(posts.authorId, userId)).all();
   const postIds = userPosts.map(p => p.id);
   
   let likesReceived = 0;
@@ -64,8 +72,19 @@ export async function calculateUserScores(userId: string) {
   let positiveInteractions = Math.min(100, (interactions / 10) * 100);
 
   // --- 5. Behavioral Consistency (0-100) ---
-  // Simple metric: Has posts, spread out over time. For now, number of posts caps at 5.
-  let behavioralConsistency = Math.min(100, (userPosts.length / 5) * 100);
+  // Metric: Posts spread out over time. 
+  let behavioralConsistency = 0;
+  if (userPosts.length > 1) {
+    const times = userPosts.map(p => new Date(p.createdAt).getTime());
+    const minTime = Math.min(...times);
+    const maxTime = Math.max(...times);
+    const spanDays = (maxTime - minTime) / (1000 * 60 * 60 * 24);
+    
+    // 7 days of spread = 100 consistency
+    behavioralConsistency = Math.min(100, (spanDays / 7) * 100); 
+  } else if (userPosts.length === 1) {
+    behavioralConsistency = 20; // minimal baseline for a single post
+  }
 
   // --- 6. Community Feedback (0-100) ---
   // 100 means no reports. Reports decrease this score.
@@ -109,10 +128,13 @@ export async function calculateUserScores(userId: string) {
 
   if (profileCompleteness === 100) positiveFactors.push("Complete profile");
 
-  if (socialTrust > 50) positiveFactors.push("Healthy social connections");
-  else if (socialTrust === 0) negativeFactors.push("Low connection count");
+  if (socialTrust > 50) positiveFactors.push("Connected to highly trusted users");
+  else if (socialTrust === 0) negativeFactors.push("Lacks trusted connections");
 
   if (positiveInteractions > 50) positiveFactors.push("High positive engagement");
+  
+  if (behavioralConsistency > 50) positiveFactors.push("Consistent activity over time");
+  else if (behavioralConsistency < 20 && userPosts.length > 5) negativeFactors.push("Erratic burst of activity");
 
   if (communityFeedback < 100) negativeFactors.push(`${reportsCount} report(s) received`);
 

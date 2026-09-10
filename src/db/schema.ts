@@ -6,6 +6,7 @@ export const users = sqliteTable('users', {
   name: text('name').notNull(),
   passwordHash: text('password_hash').notNull(),
   bio: text('bio'),
+  interests: text('interests'), // Comma-separated list of interests
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   trustScore: integer('trust_score').default(50).notNull(), // 0-100
   riskScore: integer('risk_score').default(10).notNull(), // 0-100

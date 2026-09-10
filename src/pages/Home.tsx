@@ -32,6 +32,7 @@ export default function Home() {
   const [feed, setFeed] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [newPost, setNewPost] = useState('');
+  const [category, setCategory] = useState('General');
 
   const fetchFeed = async () => {
     const res = await fetch('/api/recommendations/feed');
@@ -51,7 +52,7 @@ export default function Home() {
     await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: newPost, category: 'General' })
+      body: JSON.stringify({ content: newPost, category })
     });
     setNewPost('');
     fetchFeed();
@@ -71,7 +72,18 @@ export default function Home() {
             value={newPost}
             onChange={e => setNewPost(e.target.value)}
           />
-          <div className="flex justify-end">
+          <div className="flex justify-between items-center">
+            <select 
+              value={category} 
+              onChange={e => setCategory(e.target.value)}
+              className="px-4 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+            >
+              <option value="General">General</option>
+              <option value="Cybersecurity">Cybersecurity</option>
+              <option value="Programming">Programming</option>
+              <option value="Crypto">Crypto</option>
+              <option value="Technology">Technology</option>
+            </select>
             <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors">
               Post
             </button>

@@ -23,7 +23,16 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
   try {
     const userId = req.userId;
 
-    // 1. Collect candidate posts (top 100 most recent for performance)
+    // Fetch current user to get explicit interests
+    const currentUser = await db.select().from(users).where(eq(users.id, userId)).get();
+    if (!currentUser) return res.status(404).json({ error: 'User not found' });
+    
+    const userInterests = (currentUser.interests || '')
+      .split(',')
+      .map(i => i.trim().toLowerCase())
+      .filter(i => i.length > 0);
+
+    // 1. Collect candidate posts (top 100 most recent)
     const candidatePosts = await db
       .select({
         post: posts,
@@ -41,6 +50,8 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
       .limit(100)
       .all();
 
+    const postIds = candidatePosts.map(p => p.post.id);
+
     // Fetch user connections
     const userConnections = await db
       .select()
@@ -49,15 +60,36 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
       .all();
     const connectedUserIds = new Set(userConnections.map(c => c.followingId));
 
-    const scoredPosts = candidatePosts.map(item => {
-      // 2. Relevance Score (Stub: randomly assigned or basic keyword matching for now)
-      // In a real scenario, compare post.category/content with user interests
-      const relevanceScore = 0.5; // Neutral relevance
+    // Fetch engagement stats for these posts
+    let postEngagement = new Map(); // postId -> { likes: 0, comments: 0 }
+    postIds.forEach(id => postEngagement.set(id, { likes: 0, comments: 0 }));
 
-      // 3. Social Score
-      // Are they connected?
+    if (postIds.length > 0) {
+      const allLikes = await db.select().from(likes).where(inArray(likes.postId, postIds)).all();
+      const allComments = await db.select().from(comments).where(inArray(comments.postId, postIds)).all();
+      
+      allLikes.forEach(l => {
+        const entry = postEngagement.get(l.postId);
+        if (entry) entry.likes += 1;
+      });
+      allComments.forEach(c => {
+        const entry = postEngagement.get(c.postId);
+        if (entry) entry.comments += 1;
+      });
+    }
+
+    const scoredPosts = candidatePosts.map(item => {
+      // 2. Relevance Score (0-1)
+      const postCategory = (item.post.category || '').toLowerCase();
+      let relevanceScore = 0.2; // Base relevance
+      if (userInterests.some(interest => postCategory.includes(interest) || interest.includes(postCategory))) {
+        relevanceScore = 1.0;
+      }
+
+      // 3. Social Score (0-1)
       const isConnected = connectedUserIds.has(item.author.id);
-      const socialScore = isConnected ? 1.0 : 0.2;
+      const isSelf = item.author.id === userId;
+      const socialScore = isConnected || isSelf ? 1.0 : 0.2;
 
       // 4. Trust Score (Normalized 0-1)
       const trustScore = item.author.trustScore / 100;
@@ -65,18 +97,19 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
       // 5. Risk Score
       const riskScore = item.author.riskScore / 100;
 
-      // 6. Engagement Quality (stub)
-      const engagementQuality = 0.5; 
+      // 6. Engagement Quality (0-1)
+      const stats = postEngagement.get(item.post.id) || { likes: 0, comments: 0 };
+      // Arbitrary weight: 1 like = 1 point, 1 comment = 2 points. 10 points = 1.0 (max)
+      const engagementPoints = stats.likes * 1 + stats.comments * 2;
+      const engagementQuality = Math.min(1.0, engagementPoints / 10);
 
       // 7. Security Penalty
-      // If risk is high (>0.7) and trust is low (<0.3), massive penalty
       let riskPenalty = riskScore * 0.5;
       if (riskScore > 0.7 && trustScore < 0.3) {
         riskPenalty += 0.5;
       }
 
       // 8. Calculate final recommendation score
-      // FinalScore = 0.40 * RelevanceScore + 0.25 * TrustScore + 0.20 * SocialScore + 0.15 * EngagementQuality - RiskPenalty
       let finalScore = 
         (0.40 * relevanceScore) +
         (0.25 * trustScore) +
@@ -86,11 +119,14 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
 
       // Generate Explanation
       const explanation = [];
-      if (relevanceScore >= 0.5) explanation.push("Matches your interests");
-      if (trustScore > 0.7) explanation.push("Author has a high trust score");
+      if (relevanceScore >= 0.8) explanation.push(`Matches your interest in ${item.post.category}`);
+      if (trustScore >= 0.7) explanation.push("Author has a high trust score");
       if (isConnected) explanation.push("Author is in your connections");
-      if (riskScore < 0.3) explanation.push("Low security risk");
+      if (engagementQuality >= 0.5) explanation.push("High community engagement");
       if (riskScore > 0.7) explanation.push("Warning: Elevated security risk indicators");
+      
+      // Fallback if none trigger
+      if (explanation.length === 0 && riskScore < 0.3) explanation.push("General feed recommendation");
 
       return {
         ...item,
