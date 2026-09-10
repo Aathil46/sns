@@ -134,8 +134,11 @@ export default function Login() {
 
         {/* Quick Demo Accounts for Evaluators */}
         <div className="space-y-2.5 pt-2 border-t border-slate-100">
-          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            <span>Academic Demo Persona Fill:</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Academic Demo Personas:</span>
+            <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">
+              Demo accounts use password: <span className="font-mono">demo123</span>
+            </span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <button

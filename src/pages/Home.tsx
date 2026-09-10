@@ -451,8 +451,9 @@ export default function Home() {
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs font-medium text-slate-500">
                   <div className="flex items-center gap-4">
                     <button
-                      className="flex items-center gap-1.5 text-slate-500 hover:text-slate-800 transition-colors"
-                      onClick={() => alert('Comments demo: Engagement signal is active in calculation.')}
+                      type="button"
+                      className="flex items-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                      title="Discussion feature placeholder for demo"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
                       <span>Discussion</span>
