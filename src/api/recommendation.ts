@@ -3,6 +3,7 @@ import { db } from '../db/index.js';
 import { posts, users, likes, comments, connections } from '../db/schema.js';
 import { eq, desc, inArray, and } from 'drizzle-orm';
 import { requireAuth } from './auth.js';
+import { calculateUserScores } from '../lib/trustEngine.js';
 
 export const recommendationRouter = express.Router();
 
@@ -30,7 +31,7 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
     const userInterests = (currentUser.interests || '')
       .split(',')
       .map(i => i.trim().toLowerCase())
-      .filter(i => i.length > 0);
+      .filter(i => i.length > 2); // robust length check
 
     // 1. Collect candidate posts (top 100 most recent)
     const candidatePosts = await db
@@ -51,6 +52,15 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
       .all();
 
     const postIds = candidatePosts.map(p => p.post.id);
+
+    // Make sure author trust and risk scores are up-to-date for ranking
+    const uniqueAuthorIds = Array.from(new Set(candidatePosts.map(p => p.author.id)));
+    const liveScores = new Map();
+    for (const authorId of uniqueAuthorIds) {
+      // calculates and persists in DB, ensuring fresh telemetry 
+      const scores = await calculateUserScores(authorId);
+      liveScores.set(authorId, scores);
+    }
 
     // Fetch user connections
     const userConnections = await db
@@ -79,10 +89,19 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
     }
 
     const scoredPosts = candidatePosts.map(item => {
+      // Use Live Scores
+      const authorLiveScores = liveScores.get(item.author.id);
+      if (authorLiveScores) {
+        item.author.trustScore = authorLiveScores.trustScore;
+        item.author.riskScore = authorLiveScores.riskScore;
+      }
+
       // 2. Relevance Score (0-1)
       const postCategory = (item.post.category || '').toLowerCase();
       let relevanceScore = 0.2; // Base relevance
-      if (userInterests.some(interest => postCategory.includes(interest) || interest.includes(postCategory))) {
+      
+      // strict word match to avoid false positives (e.g. "tech" in "technology" is fine, but "a" in "category" is bad)
+      if (postCategory.length > 2 && userInterests.some(interest => postCategory.includes(interest) || interest.includes(postCategory))) {
         relevanceScore = 1.0;
       }
 
@@ -117,16 +136,17 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
         (0.15 * engagementQuality) -
         riskPenalty;
 
-      // Generate Explanation
+      // Generate Explanation securely matching factors
       const explanation = [];
-      if (relevanceScore >= 0.8) explanation.push(`Matches your interest in ${item.post.category}`);
+      if (relevanceScore === 1.0) explanation.push(`Matches your interest in ${item.post.category}`);
       if (trustScore >= 0.7) explanation.push("Author has a high trust score");
-      if (isConnected) explanation.push("Author is in your connections");
+      if (isConnected && !isSelf) explanation.push("Author is in your connections");
+      if (isSelf) explanation.push("Your own post");
       if (engagementQuality >= 0.5) explanation.push("High community engagement");
       if (riskScore > 0.7) explanation.push("Warning: Elevated security risk indicators");
       
       // Fallback if none trigger
-      if (explanation.length === 0 && riskScore < 0.3) explanation.push("General feed recommendation");
+      if (explanation.length === 0 && riskScore <= 0.7) explanation.push("General feed recommendation");
 
       return {
         ...item,
