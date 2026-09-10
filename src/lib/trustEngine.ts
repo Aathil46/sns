@@ -171,20 +171,26 @@ export async function calculateUserScores(userId: string) {
 
   // Example Event: Reports received
   if (reportsCount > 0) {
-    recentEvents.push({
-      date: new Date().toISOString(), // Mocking to now, but ideally we fetch the report date
-      description: `Community flagged account ${reportsCount} time(s)`,
-      type: 'negative'
-    });
+    const latestReports = await db.select().from(reports).where(eq(reports.reportedUserId, userId)).orderBy(sql`${reports.createdAt} DESC`).limit(5).all();
+    for (const report of latestReports) {
+      recentEvents.push({
+        date: new Date(report.createdAt).toISOString(),
+        description: `Community flagged account for: ${report.reason}`,
+        type: 'negative'
+      });
+    }
   }
   
   // Example Event: Positive interactions
   if (likesReceived > 0) {
-    recentEvents.push({
-      date: new Date().toISOString(),
-      description: `Received ${likesReceived} likes on posts`,
-      type: 'positive'
-    });
+    const latestLikes = await db.select().from(likes).where(sql`${likes.postId} IN ${postIds.length > 0 ? postIds : ['']}`).orderBy(sql`${likes.createdAt} DESC`).limit(5).all();
+    for (const like of latestLikes) {
+       recentEvents.push({
+        date: new Date(like.createdAt).toISOString(),
+        description: `Received a like on a post`,
+        type: 'positive'
+      });
+    }
   }
 
   const result = {
