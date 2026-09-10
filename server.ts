@@ -14,6 +14,7 @@ import { authRouter } from './src/api/auth.js';
 import { postsRouter } from './src/api/posts.js';
 import { recommendationRouter } from './src/api/recommendation.js';
 import { seedRouter } from './src/api/seed.js';
+import { trustRouter } from './src/api/trust.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -26,6 +27,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/posts', postsRouter);
 app.use('/api/recommendations', recommendationRouter);
 app.use('/api/seed', seedRouter);
+app.use('/api/trust', trustRouter);
 
 // API Routes will go here
 app.get('/api/health', (req, res) => {

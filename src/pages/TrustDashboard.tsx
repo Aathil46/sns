@@ -1,19 +1,31 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { Shield, ShieldAlert, ShieldCheck, Activity } from 'lucide-react';
 
+type TrustData = {
+  trustScore: number;
+  trustLevel: string;
+  riskScore: number;
+  riskLevel: string;
+  positiveFactors: string[];
+  negativeFactors: string[];
+  riskFactors: string[];
+};
+
 export default function TrustDashboard() {
   const { user } = useAuth();
+  const [data, setData] = useState<TrustData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const trustScore = user?.trustScore ?? 50;
-  const riskScore = user?.riskScore ?? 10;
+  useEffect(() => {
+    fetch('/api/trust/me')
+      .then(res => res.json())
+      .then(setData)
+      .finally(() => setLoading(false));
+  }, []);
 
-  let trustLevel = 'Medium Trust';
-  if (trustScore > 70) trustLevel = 'High Trust';
-  if (trustScore <= 30) trustLevel = 'Low Trust';
-
-  let riskLevel = 'Medium Risk';
-  if (riskScore > 70) riskLevel = 'High Risk';
-  if (riskScore <= 30) riskLevel = 'Low Risk';
+  if (loading) return <div className="p-8 text-center text-neutral-500">Loading trust profile...</div>;
+  if (!data) return <div className="p-8 text-center text-red-500">Failed to load trust profile.</div>;
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
@@ -28,9 +40,9 @@ export default function TrustDashboard() {
             <div className="flex items-center gap-2 text-neutral-600 font-medium mb-4">
               <ShieldCheck className="w-5 h-5 text-blue-600" /> Trust Score
             </div>
-            <div className="text-4xl font-bold text-neutral-900">{trustScore}<span className="text-xl text-neutral-400 font-normal">/100</span></div>
+            <div className="text-4xl font-bold text-neutral-900">{data.trustScore}<span className="text-xl text-neutral-400 font-normal">/100</span></div>
             <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg">
-              {trustLevel}
+              {data.trustLevel}
             </div>
           </div>
           <p className="text-sm text-neutral-500 mt-6 pt-4 border-t border-neutral-100">
@@ -43,9 +55,9 @@ export default function TrustDashboard() {
             <div className="flex items-center gap-2 text-neutral-600 font-medium mb-4">
               <ShieldAlert className="w-5 h-5 text-orange-600" /> Risk Score
             </div>
-            <div className="text-4xl font-bold text-neutral-900">{riskScore}<span className="text-xl text-neutral-400 font-normal">/100</span></div>
+            <div className="text-4xl font-bold text-neutral-900">{data.riskScore}<span className="text-xl text-neutral-400 font-normal">/100</span></div>
             <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-orange-50 text-orange-700 text-sm font-medium rounded-lg">
-              {riskLevel}
+              {data.riskLevel}
             </div>
           </div>
           <p className="text-sm text-neutral-500 mt-6 pt-4 border-t border-neutral-100">
@@ -62,19 +74,11 @@ export default function TrustDashboard() {
           <div>
             <h4 className="font-semibold text-green-700 mb-4 border-b border-neutral-100 pb-2">Positive Signals</h4>
             <ul className="space-y-3">
-              {trustScore > 70 ? (
-                <>
-                  <li className="flex gap-2 text-sm text-neutral-700">
-                    <span className="text-green-600">✓</span> Established account history
-                  </li>
-                  <li className="flex gap-2 text-sm text-neutral-700">
-                    <span className="text-green-600">✓</span> Healthy interaction history
-                  </li>
-                  <li className="flex gap-2 text-sm text-neutral-700">
-                    <span className="text-green-600">✓</span> Strong trusted network
-                  </li>
-                </>
-              ) : (
+              {data.positiveFactors.length > 0 ? data.positiveFactors.map((factor, i) => (
+                <li key={i} className="flex gap-2 text-sm text-neutral-700">
+                  <span className="text-green-600">✓</span> {factor}
+                </li>
+              )) : (
                 <li className="text-sm text-neutral-500">Building positive history...</li>
               )}
             </ul>
@@ -82,16 +86,13 @@ export default function TrustDashboard() {
           <div>
             <h4 className="font-semibold text-red-700 mb-4 border-b border-neutral-100 pb-2">Risk Signals</h4>
             <ul className="space-y-3">
-              {riskScore > 50 ? (
-                <>
-                  <li className="flex gap-2 text-sm text-neutral-700">
-                    <span className="text-red-600">⚠</span> High frequency of reported posts
-                  </li>
-                  <li className="flex gap-2 text-sm text-neutral-700">
-                    <span className="text-red-600">⚠</span> Suspicious interaction patterns
-                  </li>
-                </>
-              ) : (
+              {data.riskFactors.length > 0 ? data.riskFactors.map((factor, i) => (
+                <li key={i} className="flex gap-2 text-sm text-neutral-700">
+                  <span className={factor === 'No significant risk signals' ? 'text-neutral-400' : 'text-red-600'}>
+                    {factor === 'No significant risk signals' ? 'ℹ' : '⚠'}
+                  </span> {factor}
+                </li>
+              )) : (
                 <li className="text-sm text-neutral-500">None significant</li>
               )}
             </ul>
