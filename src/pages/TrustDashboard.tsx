@@ -47,7 +47,7 @@ export default function TrustDashboard() {
             </div>
           </div>
           <p className="text-sm text-neutral-500 mt-6 pt-4 border-t border-neutral-100">
-            Based on account reliability, social connections, positive interactions, and behavioral consistency.
+            Based on account reliability, profile completeness, social trust, positive engagement, behavioral consistency, and community feedback.
           </p>
         </div>
 
@@ -62,22 +62,22 @@ export default function TrustDashboard() {
             </div>
           </div>
           <p className="text-sm text-neutral-500 mt-6 pt-4 border-t border-neutral-100">
-            Based on spam-like activity, reports, excessive connection requests, and behavioral anomalies.
+            Based on account age, rapid posting velocity, community reports, and behavioral consistency.
           </p>
         </div>
       </div>
 
       <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
         <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-          <Activity className="w-5 h-5" /> Positive & Risk Signals
+          <Activity className="w-5 h-5" /> Algorithmic Signals Breakdown
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <h4 className="font-semibold text-green-700 mb-4 border-b border-neutral-100 pb-2">Positive Signals</h4>
+            <h4 className="font-semibold text-green-700 mb-4 border-b border-neutral-100 pb-2">Positive Trust Signals</h4>
             <ul className="space-y-3">
-              {data.positiveFactors.length > 0 ? data.positiveFactors.map((factor, i) => (
+              {data.positiveFactors && data.positiveFactors.length > 0 ? data.positiveFactors.map((factor, i) => (
                 <li key={i} className="flex gap-2 text-sm text-neutral-700">
-                  <span className="text-green-600">✓</span> {factor}
+                  <span className="text-green-600 font-bold">✓</span> {factor}
                 </li>
               )) : (
                 <li className="text-sm text-neutral-500">Building positive history...</li>
@@ -85,9 +85,21 @@ export default function TrustDashboard() {
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold text-red-700 mb-4 border-b border-neutral-100 pb-2">Risk Signals</h4>
+            <h4 className="font-semibold text-amber-700 mb-4 border-b border-neutral-100 pb-2">Negative Trust Factors</h4>
             <ul className="space-y-3">
-              {data.riskFactors.length > 0 ? data.riskFactors.map((factor, i) => (
+              {data.negativeFactors && data.negativeFactors.length > 0 ? data.negativeFactors.map((factor, i) => (
+                <li key={i} className="flex gap-2 text-sm text-neutral-700">
+                  <span className="text-amber-600 font-bold">−</span> {factor}
+                </li>
+              )) : (
+                <li className="text-sm text-neutral-500">No limiting trust factors</li>
+              )}
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold text-red-700 mb-4 border-b border-neutral-100 pb-2">Security Risk Signals</h4>
+            <ul className="space-y-3">
+              {data.riskFactors && data.riskFactors.length > 0 ? data.riskFactors.map((factor, i) => (
                 <li key={i} className="flex gap-2 text-sm text-neutral-700">
                   <span className={factor === 'No significant risk signals' ? 'text-neutral-400' : 'text-red-600'}>
                     {factor === 'No significant risk signals' ? 'ℹ' : '⚠'}

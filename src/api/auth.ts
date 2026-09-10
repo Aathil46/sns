@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -34,8 +35,15 @@ authRouter.post('/register', async (req, res) => {
       createdAt: new Date(),
     });
 
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    };
+
     const token = jwt.sign({ userId: id }, JWT_SECRET, { expiresIn: '1d' });
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+    res.cookie('token', token, cookieOptions);
     res.json({ success: true, user: { id, username, name } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -53,8 +61,15 @@ authRouter.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
 
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    };
+
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1d' });
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+    res.cookie('token', token, cookieOptions);
     res.json({ success: true, user: { id: user.id, username: user.username, name: user.name } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -62,7 +77,11 @@ authRouter.post('/login', async (req, res) => {
 });
 
 authRouter.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const
+  });
   res.json({ success: true });
 });
 

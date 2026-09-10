@@ -1,8 +1,31 @@
+# Dependencies
 node_modules/
+
+# Production builds
 build/
 dist/
 coverage/
+
+# System and logs
 .DS_Store
 *.log
+
+# Environment
 .env*
 !.env.example
+
+# Local SQLite databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+local.db
+
+# Session cookies and test artifacts
+cookies*.txt
+feed*.json
+
+# Scratch and test runner scripts
+test-*.js
+check-scammer.js
+

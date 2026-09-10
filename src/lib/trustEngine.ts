@@ -1,6 +1,6 @@
 import { db } from '../db/index.js';
 import { users, posts, likes, comments, connections, reports, trustEvents } from '../db/schema.js';
-import { eq, sql, and, count } from 'drizzle-orm';
+import { eq, and, count, inArray, desc } from 'drizzle-orm';
 
 const TRUST_WEIGHTS = {
   accountReliability: 0.15,
@@ -56,13 +56,13 @@ export async function calculateUserScores(userId: string) {
   if (postIds.length > 0) {
     const likesRes = await db.select({ count: count() })
       .from(likes)
-      .where(sql`${likes.postId} IN ${postIds}`)
+      .where(inArray(likes.postId, postIds))
       .get();
     likesReceived = likesRes?.count || 0;
 
     const commentsRes = await db.select({ count: count() })
       .from(comments)
-      .where(sql`${comments.postId} IN ${postIds}`)
+      .where(inArray(comments.postId, postIds))
       .get();
     commentsReceived = commentsRes?.count || 0;
   }
@@ -112,10 +112,11 @@ export async function calculateUserScores(userId: string) {
   // Risk 2: High reports
   if (reportsCount > 0) riskScore += (reportsCount * 25);
 
-  // Risk 3: Spam-like posting frequency (e.g., lots of posts in a short time)
-  // For simplicity, > 10 posts = +20 risk, > 20 posts = +40 risk
-  if (userPosts.length > 10) riskScore += 20;
-  if (userPosts.length > 20) riskScore += 20;
+  // Risk 3: Spam-like posting frequency / velocity within a short time window
+  const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+  const recentPosts24h = userPosts.filter(p => new Date(p.createdAt).getTime() >= oneDayAgo);
+  if (recentPosts24h.length >= 10) riskScore += 20;
+  if (recentPosts24h.length >= 20) riskScore += 20;
 
   riskScore = Math.min(100, riskScore);
 
@@ -142,7 +143,7 @@ export async function calculateUserScores(userId: string) {
   const riskFactors = [];
   if (accountAgeDays < 1) riskFactors.push("Account is newly created");
   if (reportsCount > 0) riskFactors.push("Multiple community reports");
-  if (userPosts.length > 10) riskFactors.push("High posting volume");
+  if (recentPosts24h.length >= 10) riskFactors.push("Abnormally high posting velocity");
 
   if (riskFactors.length === 0) riskFactors.push("No significant risk signals");
 
@@ -171,7 +172,7 @@ export async function calculateUserScores(userId: string) {
 
   // Example Event: Reports received
   if (reportsCount > 0) {
-    const latestReports = await db.select().from(reports).where(eq(reports.reportedUserId, userId)).orderBy(sql`${reports.createdAt} DESC`).limit(5).all();
+    const latestReports = await db.select().from(reports).where(eq(reports.reportedUserId, userId)).orderBy(desc(reports.createdAt)).limit(5).all();
     for (const report of latestReports) {
       recentEvents.push({
         date: new Date(report.createdAt).toISOString(),
@@ -182,8 +183,8 @@ export async function calculateUserScores(userId: string) {
   }
   
   // Example Event: Positive interactions
-  if (likesReceived > 0) {
-    const latestLikes = await db.select().from(likes).where(sql`${likes.postId} IN ${postIds.length > 0 ? postIds : ['']}`).orderBy(sql`${likes.createdAt} DESC`).limit(5).all();
+  if (likesReceived > 0 && postIds.length > 0) {
+    const latestLikes = await db.select().from(likes).where(inArray(likes.postId, postIds)).orderBy(desc(likes.createdAt)).limit(5).all();
     for (const like of latestLikes) {
        recentEvents.push({
         date: new Date(like.createdAt).toISOString(),
