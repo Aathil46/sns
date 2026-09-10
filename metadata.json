@@ -1,0 +1,6 @@
+{
+  "name": "Trust-Aware Social Recommendation System",
+  "description": "An academic prototype of a social recommendation system that evaluates trust, risk, and social connections to generate personalized feeds.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
