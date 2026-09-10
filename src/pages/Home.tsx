@@ -124,23 +124,69 @@ export default function Home() {
             
             <p className="text-neutral-800 text-[15px] leading-relaxed whitespace-pre-wrap">{post.content}</p>
             
-            <div className="bg-neutral-50 p-4 rounded-xl space-y-2 border border-neutral-100">
-              <div className="flex items-center gap-2 text-sm font-semibold text-neutral-700">
+            <details className="bg-neutral-50 p-4 rounded-xl border border-neutral-100 group">
+              <summary className="flex items-center gap-2 text-sm font-semibold text-neutral-700 cursor-pointer list-none">
                 <Info className="w-4 h-4" />
                 Why am I seeing this?
+                <span className="ml-auto text-neutral-400 text-xs transition-transform group-open:rotate-180">▼</span>
+              </summary>
+              <div className="mt-3 pt-3 border-t border-neutral-200 space-y-4">
+                <ul className="space-y-2">
+                  {explanation.map((reason, i) => (
+                    <li key={i} className="text-sm text-neutral-600 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                      {reason}
+                    </li>
+                  ))}
+                </ul>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                  <div className="bg-white p-2 rounded border border-neutral-200 text-center shadow-sm">
+                    <div className="text-neutral-400 mb-1">Relevance</div>
+                    <div className="font-semibold text-neutral-700">{scores.relevanceScore.toFixed(2)}</div>
+                  </div>
+                  <div className="bg-white p-2 rounded border border-neutral-200 text-center shadow-sm">
+                    <div className="text-neutral-400 mb-1">Trust</div>
+                    <div className="font-semibold text-neutral-700">{scores.trustScore.toFixed(2)}</div>
+                  </div>
+                  <div className="bg-white p-2 rounded border border-neutral-200 text-center shadow-sm">
+                    <div className="text-neutral-400 mb-1">Social</div>
+                    <div className="font-semibold text-neutral-700">{scores.socialScore.toFixed(2)}</div>
+                  </div>
+                  <div className="bg-white p-2 rounded border border-neutral-200 text-center shadow-sm">
+                    <div className="text-neutral-400 mb-1">Engagement</div>
+                    <div className="font-semibold text-neutral-700">{scores.engagementQuality.toFixed(2)}</div>
+                  </div>
+                  <div className="bg-red-50 p-2 rounded border border-red-100 text-center shadow-sm">
+                    <div className="text-red-400 mb-1">Risk Penalty</div>
+                    <div className="font-semibold text-red-600">-{scores.riskPenalty.toFixed(2)}</div>
+                  </div>
+                </div>
+                <div className="text-xs text-neutral-500 font-medium">
+                  Final Ranking Score: {scores.finalScore.toFixed(2)}
+                </div>
               </div>
-              <ul className="space-y-1">
-                {explanation.map((reason, i) => (
-                  <li key={i} className="text-sm text-neutral-600 flex items-center gap-2">
-                    <span className="w-1 h-1 bg-neutral-400 rounded-full" />
-                    {reason}
-                  </li>
-                ))}
-              </ul>
-              <div className="text-xs text-neutral-400 pt-2 mt-2 border-t border-neutral-200">
-                Algorithmic Score: {scores.finalScore.toFixed(2)}
+            </details>
+
+            {author.riskScore >= 70 && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-2 text-sm text-red-800">
+                  <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <span>Our system has detected unusual activity from this account. Proceed with caution.</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    fetch('/api/trust/report', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ reportedUserId: author.id, reportedPostId: post.id, reason: 'Suspicious Activity' })
+                    }).then(() => alert('Report submitted securely. Thank you.'));
+                  }}
+                  className="flex-shrink-0 text-xs font-medium px-4 py-2 bg-white text-red-700 border border-red-200 rounded-lg shadow-sm hover:bg-red-50 transition-colors"
+                >
+                  Report Post
+                </button>
               </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-4 pt-2">
               <button className="flex items-center gap-2 text-sm font-medium text-neutral-500 hover:text-neutral-800 transition-colors">

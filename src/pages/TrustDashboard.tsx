@@ -10,6 +10,7 @@ type TrustData = {
   positiveFactors: string[];
   negativeFactors: string[];
   riskFactors: string[];
+  recentEvents: { date: string, description: string, type: string }[];
 };
 
 export default function TrustDashboard() {
@@ -98,6 +99,30 @@ export default function TrustDashboard() {
             </ul>
           </div>
         </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
+        <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+          <Activity className="w-5 h-5" /> Recent Trust Events
+        </h3>
+        {data.recentEvents && data.recentEvents.length > 0 ? (
+          <div className="space-y-4">
+            {data.recentEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((event, i) => (
+              <div key={i} className="flex items-start gap-3 pb-4 border-b border-neutral-100 last:border-0 last:pb-0">
+                <div className={`mt-1 flex-shrink-0 w-2 h-2 rounded-full ${
+                  event.type === 'positive' ? 'bg-green-500' :
+                  event.type === 'negative' ? 'bg-red-500' : 'bg-neutral-400'
+                }`} />
+                <div>
+                  <p className="text-sm font-medium text-neutral-800">{event.description}</p>
+                  <p className="text-xs text-neutral-500">{new Date(event.date).toLocaleDateString()}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-500">No recent events.</p>
+        )}
       </div>
 
       <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">

@@ -159,6 +159,34 @@ export async function calculateUserScores(userId: string) {
     return "HIGH RISK";
   };
 
+  // Gather Recent Events
+  const recentEvents = [];
+  
+  // Example Event: Account Creation
+  recentEvents.push({
+    date: new Date(user.createdAt).toISOString(),
+    description: 'Account created',
+    type: 'neutral'
+  });
+
+  // Example Event: Reports received
+  if (reportsCount > 0) {
+    recentEvents.push({
+      date: new Date().toISOString(), // Mocking to now, but ideally we fetch the report date
+      description: `Community flagged account ${reportsCount} time(s)`,
+      type: 'negative'
+    });
+  }
+  
+  // Example Event: Positive interactions
+  if (likesReceived > 0) {
+    recentEvents.push({
+      date: new Date().toISOString(),
+      description: `Received ${likesReceived} likes on posts`,
+      type: 'positive'
+    });
+  }
+
   const result = {
     trustScore,
     trustLevel: getTrustLevel(trustScore),
@@ -166,7 +194,8 @@ export async function calculateUserScores(userId: string) {
     riskLevel: getRiskLevel(riskScore),
     positiveFactors,
     negativeFactors,
-    riskFactors
+    riskFactors,
+    recentEvents
   };
 
   // Optionally, persist these scores to the DB
