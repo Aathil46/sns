@@ -27,7 +27,7 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
     // Fetch current user to get explicit interests
     const currentUser = await db.select().from(users).where(eq(users.id, userId)).get();
     if (!currentUser) return res.status(404).json({ error: 'User not found' });
-    
+
     const userInterests = (currentUser.interests || '')
       .split(',')
       .map(i => i.trim().toLowerCase())
@@ -57,7 +57,7 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
     const uniqueAuthorIds = Array.from(new Set(candidatePosts.map(p => p.author.id)));
     const liveScores = new Map();
     for (const authorId of uniqueAuthorIds) {
-      // calculates and persists in DB, ensuring fresh telemetry 
+      // calculates and persists in DB, ensuring fresh telemetry
       const scores = await calculateUserScores(authorId);
       liveScores.set(authorId, scores);
     }
@@ -77,7 +77,7 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
     if (postIds.length > 0) {
       const allLikes = await db.select().from(likes).where(inArray(likes.postId, postIds)).all();
       const allComments = await db.select().from(comments).where(inArray(comments.postId, postIds)).all();
-      
+
       allLikes.forEach(l => {
         const entry = postEngagement.get(l.postId);
         if (entry) entry.likes += 1;
@@ -99,7 +99,7 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
       // 2. Relevance Score (0-1)
       const postCategory = (item.post.category || '').toLowerCase();
       let relevanceScore = 0.2; // Base relevance
-      
+
       // strict word match to avoid false positives (e.g. "tech" in "technology" is fine, but "a" in "category" is bad)
       if (postCategory.length > 2 && userInterests.some(interest => postCategory.includes(interest) || interest.includes(postCategory))) {
         relevanceScore = 1.0;
@@ -129,7 +129,7 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
       }
 
       // 8. Calculate final recommendation score
-      let finalScore = 
+      let finalScore =
         (0.40 * relevanceScore) +
         (0.25 * trustScore) +
         (0.20 * socialScore) +
@@ -144,7 +144,7 @@ recommendationRouter.get('/feed', requireAuth, async (req: any, res: any) => {
       if (isSelf) explanation.push("Your own post");
       if (engagementQuality >= 0.5) explanation.push("High community engagement");
       if (riskScore > 0.7) explanation.push("Warning: Elevated security risk indicators");
-      
+
       // Fallback if none trigger
       if (explanation.length === 0 && riskScore <= 0.7) explanation.push("General feed recommendation");
 

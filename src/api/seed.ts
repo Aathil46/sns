@@ -9,7 +9,7 @@ export const seedRouter = express.Router();
 seedRouter.post('/run', async (req, res) => {
   try {
     const passwordHash = await bcrypt.hash('demo123', 10);
-    
+
     // Clear existing data for demo
     await db.delete(reports).run();
     await db.delete(likes).run();
@@ -76,7 +76,7 @@ seedRouter.post('/run', async (req, res) => {
     // Create some posts
     const post1 = crypto.randomUUID();
     const post2 = crypto.randomUUID();
-    
+
     await db.insert(posts).values([
       {
         id: post1,
@@ -127,7 +127,7 @@ seedRouter.post('/run', async (req, res) => {
       await db.insert(likes).values({
         id: crypto.randomUUID(),
         postId: normalPostId,
-        userId: trustedId, 
+        userId: trustedId,
         createdAt: new Date()
       });
     }

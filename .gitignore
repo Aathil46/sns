@@ -28,4 +28,3 @@ feed*.json
 # Scratch and test runner scripts
 test-*.js
 check-scammer.js
-

@@ -37,7 +37,7 @@ export async function calculateUserScores(userId: string) {
 
   const followersCount = followerRecords.length;
   let socialTrust = 0;
-  
+
   if (followersCount > 0) {
     const totalTrust = followerRecords.reduce((sum, record) => sum + (record.followerTrust || 0), 0);
     const averageTrust = totalTrust / followersCount;
@@ -49,7 +49,7 @@ export async function calculateUserScores(userId: string) {
   // Count likes received on their posts
   const userPosts = await db.select({ id: posts.id, createdAt: posts.createdAt }).from(posts).where(eq(posts.authorId, userId)).all();
   const postIds = userPosts.map(p => p.id);
-  
+
   let likesReceived = 0;
   let commentsReceived = 0;
 
@@ -72,16 +72,16 @@ export async function calculateUserScores(userId: string) {
   let positiveInteractions = Math.min(100, (interactions / 10) * 100);
 
   // --- 5. Behavioral Consistency (0-100) ---
-  // Metric: Posts spread out over time. 
+  // Metric: Posts spread out over time.
   let behavioralConsistency = 0;
   if (userPosts.length > 1) {
     const times = userPosts.map(p => new Date(p.createdAt).getTime());
     const minTime = Math.min(...times);
     const maxTime = Math.max(...times);
     const spanDays = (maxTime - minTime) / (1000 * 60 * 60 * 24);
-    
+
     // 7 days of spread = 100 consistency
-    behavioralConsistency = Math.min(100, (spanDays / 7) * 100); 
+    behavioralConsistency = Math.min(100, (spanDays / 7) * 100);
   } else if (userPosts.length === 1) {
     behavioralConsistency = 20; // minimal baseline for a single post
   }
@@ -93,7 +93,7 @@ export async function calculateUserScores(userId: string) {
   let communityFeedback = Math.max(0, 100 - (reportsCount * 33)); // 3 reports = 0 score
 
   // Calculate Final Trust Score
-  const trustScoreRaw = 
+  const trustScoreRaw =
     (accountReliability * TRUST_WEIGHTS.accountReliability) +
     (profileCompleteness * TRUST_WEIGHTS.profileCompleteness) +
     (socialTrust * TRUST_WEIGHTS.socialTrust) +
@@ -105,7 +105,7 @@ export async function calculateUserScores(userId: string) {
 
   // Calculate Risk Score
   let riskScore = 0;
-  
+
   // Risk 1: New account (< 1 day)
   if (accountAgeDays < 1) riskScore += 20;
 
@@ -133,7 +133,7 @@ export async function calculateUserScores(userId: string) {
   else if (socialTrust === 0) negativeFactors.push("Lacks trusted connections");
 
   if (positiveInteractions > 50) positiveFactors.push("High positive engagement");
-  
+
   if (behavioralConsistency > 50) positiveFactors.push("Consistent activity over time");
   else if (behavioralConsistency < 20 && userPosts.length > 5) negativeFactors.push("Erratic burst of activity");
 
@@ -162,7 +162,7 @@ export async function calculateUserScores(userId: string) {
 
   // Gather Recent Events
   const recentEvents = [];
-  
+
   // Example Event: Account Creation
   recentEvents.push({
     date: new Date(user.createdAt).toISOString(),
@@ -181,7 +181,7 @@ export async function calculateUserScores(userId: string) {
       });
     }
   }
-  
+
   // Example Event: Positive interactions
   if (likesReceived > 0 && postIds.length > 0) {
     const latestLikes = await db.select().from(likes).where(inArray(likes.postId, postIds)).orderBy(desc(likes.createdAt)).limit(5).all();

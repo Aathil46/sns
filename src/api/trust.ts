@@ -54,8 +54,8 @@ trustRouter.post('/report', requireAuth, async (req: any, res: any) => {
       .where(
         and(
           eq(reports.reporterId, req.userId),
-          targetPostId 
-            ? eq(reports.reportedPostId, targetPostId) 
+          targetPostId
+            ? eq(reports.reportedPostId, targetPostId)
             : eq(reports.reportedUserId, targetUserId)
         )
       )

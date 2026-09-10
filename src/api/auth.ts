@@ -103,7 +103,7 @@ authRouter.get('/me', requireAuth, async (req: any, res: any) => {
   try {
     const user = await db.select().from(users).where(eq(users.id, req.userId)).get();
     if (!user) return res.status(404).json({ error: 'User not found' });
-    
+
     // Omit password hash
     const { passwordHash, ...safeUser } = user;
     res.json({ user: safeUser });
