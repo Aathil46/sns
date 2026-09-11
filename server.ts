@@ -16,6 +16,7 @@ import { postsRouter } from './src/api/posts.js';
 import { recommendationRouter } from './src/api/recommendation.js';
 import { seedRouter } from './src/api/seed.js';
 import { trustRouter } from './src/api/trust.js';
+import { initDatabase } from './src/db/init.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -37,6 +38,12 @@ app.get('/api/health', (req, res) => {
 
 // Vite / Static file serving
 async function startServer() {
+  try {
+    await initDatabase();
+  } catch (err) {
+    console.error('Failed to initialize database schema:', err);
+  }
+
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.resolve(__dirname, 'client')));
     app.use('*', (req, res) => {

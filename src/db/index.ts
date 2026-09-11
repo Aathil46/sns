@@ -13,5 +13,8 @@ const dbPath = process.env.NODE_ENV === 'production'
   ? path.resolve(__dirname, '../local.db')
   : path.resolve(process.cwd(), 'local.db');
 
-export const sqlite = createClient({ url: `file:${dbPath}` });
+export const sqlite = createClient({
+  url: process.env.DATABASE_URL || `file:${dbPath}`,
+  authToken: process.env.DATABASE_AUTH_TOKEN,
+});
 export const db = drizzle(sqlite, { schema });
